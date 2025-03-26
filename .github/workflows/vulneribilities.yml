@@ -23,8 +23,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y wget
-          wget https://github.com/aquasecurity/trivy/releases/download/v0.29.0/trivy_0.29.0_Linux-64bit.deb
-          sudo dpkg -i trivy_0.29.0_Linux-64bit.deb
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.6.0/trivy_0.6.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.6.0_Linux-64bit.deb
 
       - name: Build Docker image
         run: |
@@ -57,4 +57,3 @@ jobs:
           else
             echo "Trivy report not found. Assuming no vulnerabilities."
           fi
-
