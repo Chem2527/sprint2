@@ -22,18 +22,19 @@ jobs:
       - name: Install Latest Trivy (>= 0.6)
         run: |
           set -e
-          # Determine latest version
+
+          # Fetch the latest version of Trivy from GitHub Releases API
           TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | jq -r .tag_name)
 
-          #set version number to remove v
-          VERSION_NO=${TRIVY_VERSION:1}
+          # Remove the 'v' prefix from the version string
+          VERSION_NO=$(echo $TRIVY_VERSION | sed 's/^v//')
 
-          #Check if trivy version is greater than 0.6
+          # Check if Trivy version is greater than 0.6 using `bc`
           if (( $(echo "$VERSION_NO > 0.6" | bc -l) )); then
-             echo "Trivy version $TRIVY_VERSION is acceptable"
+            echo "Trivy version $TRIVY_VERSION is acceptable (version number: $VERSION_NO)"
           else
-             echo "Trivy version $TRIVY_VERSION is not acceptable"
-             exit 1
+            echo "Trivy version $TRIVY_VERSION is NOT acceptable (version number: $VERSION_NO)"
+            exit 1
           fi
 
           # Construct the download URL
