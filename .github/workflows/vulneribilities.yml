@@ -14,48 +14,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3  # Use a specific commit SHA or tag for stability
 
-      - name: Set up Docker Buildx
+      - name: Set up Docker
         uses: docker/setup-buildx-action@v2
 
-      - name: Install Latest Trivy (>= 0.6)
+      - name: Install Trivy (Vulnerability Scanner)
         run: |
-          set -e
-
-          # Fetch the latest version of Trivy from GitHub Releases API
-          TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | jq -r .tag_name)
-
-          # Remove the 'v' prefix from the version string
-          VERSION_NO=$(echo $TRIVY_VERSION | sed 's/^v//')
-
-          # Check if Trivy version is greater than 0.6 using `bc`
-          if (( $(echo "$VERSION_NO > 0.6" | bc -l) )); then
-            echo "Trivy version $TRIVY_VERSION is acceptable (version number: $VERSION_NO)"
-          else
-            echo "Trivy version $TRIVY_VERSION is NOT acceptable (version number: $VERSION_NO)"
-            exit 1
-          fi
-
-          # Construct the download URL
-          TRIVY_URL="https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb"
-
-          # Download Trivy
-          wget "${TRIVY_URL}"
-
-          # Install Trivy
-          sudo dpkg -i "trivy_${TRIVY_VERSION}_Linux-64bit.deb"
-
-          # Clean up the downloaded file
-          rm "trivy_${TRIVY_VERSION}_Linux-64bit.deb"
-
-          # Verify installation
-          trivy --version
-
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.29.0/trivy_0.29.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.29.0_Linux-64bit.deb
       - name: Build Docker image
         run: |
           docker build -t myapp .
-
       - name: Run Trivy scan
         id: trivy
         run: trivy image --exit-code 0 --format json --output trivy-report.json --severity $SEVERITY_THRESHOLD myapp
@@ -63,7 +35,6 @@ jobs:
       - name: List files in the directory (for debugging)
         run: |
           ls -alh
-
       - name: Upload Trivy report (if scan ran)
         if: steps.trivy.outcome != 'skipped'
         uses: actions/upload-artifact@v4
