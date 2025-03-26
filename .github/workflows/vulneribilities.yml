@@ -19,18 +19,49 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Install Latest Trivy (>= 0.6)
+        run: |
+          set -e
+          # Determine latest version
+          TRIVY_VERSION=$(curl -s https://api.github.com/repos/aquasecurity/trivy/releases/latest | jq -r .tag_name)
+
+          #set version number to remove v
+          VERSION_NO=${TRIVY_VERSION:1}
+
+          #Check if trivy version is greater than 0.6
+          if (( $(echo "$VERSION_NO > 0.6" | bc -l) )); then
+             echo "Trivy version $TRIVY_VERSION is acceptable"
+          else
+             echo "Trivy version $TRIVY_VERSION is not acceptable"
+             exit 1
+          fi
+
+          # Construct the download URL
+          TRIVY_URL="https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+
+          # Download Trivy
+          wget "${TRIVY_URL}"
+
+          # Install Trivy
+          sudo dpkg -i "trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+
+          # Clean up the downloaded file
+          rm "trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+
+          # Verify installation
+          trivy --version
+
       - name: Build Docker image
         run: |
           docker build -t myapp .
 
       - name: Run Trivy scan
         id: trivy
-        uses: aquasecurity/trivy-action@latest  # Use 'latest' or specify a version like 'v0.30.0'
-        with:
-          image-ref: myapp
-          format: 'json'
-          output: 'trivy-report.json'
-          severity: ${{ env.SEVERITY_THRESHOLD }}
+        run: trivy image --exit-code 0 --format json --output trivy-report.json --severity $SEVERITY_THRESHOLD myapp
+
+      - name: List files in the directory (for debugging)
+        run: |
+          ls -alh
 
       - name: Upload Trivy report (if scan ran)
         if: steps.trivy.outcome != 'skipped'
