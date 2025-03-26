@@ -23,6 +23,7 @@ jobs:
         run: |
           set -e
           curl -sSfL https://aquasecurity.github.io/trivy/install.sh | sh -s -- -b /usr/local/bin
+          echo "::add-path::/usr/local/bin"
 
       - name: Build Docker image
         run: |
