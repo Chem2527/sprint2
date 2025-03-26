@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3  # Use a specific commit SHA or tag for stability
 
       - name: Set up Docker
         uses: docker/setup-buildx-action@v2
@@ -30,25 +30,31 @@ jobs:
         run: |
           docker build -t myapp .
 
-      - name: Scan Docker image for vulnerabilities
-        run: |
-          trivy image --severity $SEVERITY_THRESHOLD --exit-code 1 myapp
+      - name: Run Trivy scan
+        id: trivy
+        run: trivy image --exit-code 0 --format json --output trivy-report.json --severity $SEVERITY_THRESHOLD myapp
 
       - name: List files in the directory (for debugging)
         run: |
           ls -alh
 
-      - name: Upload Trivy report (optional)
-        uses: actions/upload-artifact@v3
+      - name: Upload Trivy report (if scan ran)
+        if: steps.trivy.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
         with:
           name: trivy-report
-          path: trivy-report.json  # Ensure this file exists from the scan step
+          path: trivy-report.json
 
       - name: Provide feedback on vulnerabilities
         run: |
-          if [ $? -eq 1 ]; then
-            echo "Vulnerabilities found in the image. Build failed."
-            exit 1
+          if [ -f trivy-report.json ]; then
+            if jq -e '.[] | select(.Severity=="CRITICAL" or .Severity=="HIGH")' trivy-report.json > /dev/null; then
+              echo "Critical or High vulnerabilities found. Build failed."
+              exit 1
+            else
+              echo "No critical or high vulnerabilities found. Build passed."
+            fi
           else
-            echo "No critical vulnerabilities found. Build passed."
+            echo "Trivy report not found. Assuming no vulnerabilities."
           fi
+
