@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SEVERITY_THRESHOLD: ${{ secrets.VULNERABILITY_SEVERITY }}  # Access the secret for severity threshold
+      SEVERITY_THRESHOLD: ${{ secrets.VULNERABILITY_SEVERITY }}
 
     steps:
       - name: Checkout repository
@@ -32,7 +32,6 @@ jobs:
 
       - name: Scan Docker image for vulnerabilities
         run: |
-          # Scan the Docker image with configurable severity using secret value
           trivy image --severity $SEVERITY_THRESHOLD --exit-code 1 myapp
 
       - name: List files in the directory (for debugging)
@@ -40,10 +39,10 @@ jobs:
           ls -alh
 
       - name: Upload Trivy report (optional)
-        uses: actions/upload-artifact@v3  # Updated to latest version
+        uses: actions/upload-artifact@v3
         with:
           name: trivy-report
-          path: trivy-report.json
+          path: trivy-report.json  # Ensure this file exists from the scan step
 
       - name: Provide feedback on vulnerabilities
         run: |
