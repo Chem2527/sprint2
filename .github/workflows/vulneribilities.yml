@@ -19,33 +19,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Install Latest Trivy (Vulnerability Scanner)
-        run: |
-          set -e
-          curl -sSfL https://aquasecurity.github.io/trivy/install.sh | sh -s -- -b /usr/local/bin
-
-      - name: Add /usr/local/bin to PATH
-        run: echo "PATH=$PATH:/usr/local/bin" >> $GITHUB_ENV
-
-      - name: Verify Trivy Installation
-        run: |
-          set -e
-          trivy --version
-
       - name: Build Docker image
         run: |
-          set -e
           docker build -t myapp .
 
       - name: Run Trivy scan
         id: trivy
-        run: |
-          set -e
-          trivy image --exit-code 1 --format json --output trivy-report.json --severity $SEVERITY_THRESHOLD myapp
-
-      - name: List files in the directory (for debugging)
-        run: |
-          ls -alh
+        uses: aquasecurity/trivy-action@latest  # Use 'latest' or specify a version like 'v0.30.0'
+        with:
+          image-ref: myapp
+          format: 'json'
+          output: 'trivy-report.json'
+          severity: ${{ env.SEVERITY_THRESHOLD }}
 
       - name: Upload Trivy report (if scan ran)
         if: steps.trivy.outcome != 'skipped'
@@ -56,7 +41,6 @@ jobs:
 
       - name: Provide feedback on vulnerabilities
         run: |
-          set -e
           if [ -f trivy-report.json ]; then
             if jq -e '.[] | select(.Severity=="CRITICAL" or .Severity=="HIGH")' trivy-report.json > /dev/null; then
               echo "Critical or High vulnerabilities found. Build failed."
