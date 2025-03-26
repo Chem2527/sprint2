@@ -22,8 +22,14 @@ jobs:
       - name: Install Latest Trivy (Vulnerability Scanner)
         run: |
           set -e
-          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/install.sh | sh -s -- -b /usr/local/bin
-          echo "/usr/local/bin" >> $GITHUB_PATH  # Update PATH using GITHUB_PATH
+          curl -sSfL https://aquasecurity.github.io/trivy/install.sh | sh -s -- -b /usr/local/bin
+          echo "Adding /usr/local/bin to PATH"
+          echo "/usr/local/bin" >> $GITHUB_PATH
+
+      - name: Verify Trivy Installation
+        run: |
+          set -e
+          trivy --version
 
       - name: Build Docker image
         run: |
