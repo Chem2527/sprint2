@@ -1,0 +1,52 @@
+name: CI Pipeline with Vulnerability Scanning
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    env:
+      SEVERITY_THRESHOLD: ${{ secrets.VULNERABILITY_SEVERITY }}  # Access the secret for severity threshold
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install Trivy (Vulnerability Scanner)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.29.0/trivy_0.29.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.29.0_Linux-64bit.deb
+
+      - name: Build Docker image
+        run: |
+          # Build Docker image from the root level Dockerfile
+          docker build -t myapp .
+
+      - name: Scan Docker image for vulnerabilities
+        run: |
+          # Scan the Docker image with configurable severity using secret value
+          trivy image --severity $SEVERITY_THRESHOLD --exit-code 1 myapp
+
+      - name: Upload Trivy report (optional)
+        uses: actions/upload-artifact@v2
+        with:
+          name: trivy-report
+          path: trivy-report.json
+
+      - name: Provide feedback on vulnerabilities
+        run: |
+          if [ $? -eq 1 ]; then
+            echo "Vulnerabilities found in the image. Build failed."
+            exit 1
+          else
+            echo "No critical vulnerabilities found. Build passed."
+          fi
